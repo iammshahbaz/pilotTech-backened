@@ -15,12 +15,17 @@ router.get('/', async (req, res) => {
 });
 
 // Subscribe to Stock
+
 router.post('/subscribe', protect, async (req, res) => {
   const { symbol } = req.body;
 
   try {
     const stock = await Stock.findOne({ symbol });
     if (!stock) return res.status(404).json({ message: 'Stock not found' });
+
+    if (req.user.subscriptions.includes(symbol)) {
+      return res.status(400).json({ message: 'Already subscribed to this stock' });
+    }
 
     req.user.subscriptions.push(symbol);
     await req.user.save();
@@ -30,6 +35,7 @@ router.post('/subscribe', protect, async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // Unsubscribe from Stock
 router.post('/unsubscribe', protect, async (req, res) => {

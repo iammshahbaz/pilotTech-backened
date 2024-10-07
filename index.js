@@ -17,12 +17,13 @@ app.use('/stocks', stockRoutes);
 
 
 
-app.listen(process.env.port,async()=>{
+app.listen(process.env.PORT || 8080, async () => {
     try {
-        await connection;
-        console.log("connected to mongodb")
-        console.log(`Server is running at 8080`)
+      await connection;
+      console.log("Connected to MongoDB");
+      console.log(`Server is running at port ${process.env.PORT || 8080}`);
     } catch (error) {
-        console.log("Error connecting to db")
+      console.log("Error connecting to db", error);
     }
-})
+  });
+  
