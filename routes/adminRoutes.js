@@ -22,17 +22,26 @@ adminrouter.get("/",async(req,res)=>{
 //to post a new stock to the alllstocks page by the admin
 
 // adminrouter.post("/",auth,access("admin"),async(req,res)=>{
-
-adminrouter.post("/",async(req,res)=>{
-    try {
-        const stock=new StockModel(req.body)
-        await stock.save()
-        res.status(200).send({"msg":"The new stock added"})
-    } catch (error) {
-        res.status(500).send({"msg":"Error in adding stock"})
-    }
-
-})
+    adminrouter.post("/", async (req, res) => {
+        try {
+          const { symbol } = req.body;
+      
+          // Check if the stock with the same symbol already exists
+          const existingStock = await StockModel.findOne({ symbol });
+          if (existingStock) {
+            return res.status(400).send({ msg: "Stock with this symbol already exists" });
+          }
+      
+          const stock = new StockModel(req.body);
+          await stock.save();
+          res.status(200).send({ msg: "The new stock has been added" });
+        } catch (error) {
+          console.error("Error adding stock:", error); // Log the error for debugging
+          res.status(500).send({ msg: "Error in adding stock", error: error.message });
+        }
+      });
+      
+      
 
 //to update a new stock to the alllstocks page by the admin
 // adminrouter.patch("/:stockID",auth,access("admin"),async(req,res)=>{
