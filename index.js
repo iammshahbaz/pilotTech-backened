@@ -1,29 +1,46 @@
-require('dotenv').config();
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-const userRoutes = require('./routes/userRoutes');
-const stockRoutes = require('./routes/stockRoutes');
-const { connection } = require('./config/db');
-
+const express = require("express");
+require("dotenv").config()
+const {connection} =require("./config/db")
+const {userRouter} = require("./routes/userRoutes")
+const {StockModel} = require("./model/stockModel")
+const cors=require("cors");
+const { adminrouter } = require("./routes/adminRoutes");
+const { portfolioRouter } = require("./routes/portfolioRoutes");
 const app = express();
-
 app.use(express.json());
-app.use(cors());
-
-// Routes
-app.use('/users', userRoutes);
-app.use('/stocks', stockRoutes);
+app.use(cors())
 
 
+app.use("/users",userRouter)
+app.use("/adminstocks",adminrouter)
+app.use("/portfolio",portfolioRouter)
 
-app.listen(process.env.PORT || 8080, async () => {
+//Public Routes
+
+app.get("/", async(req,res)=>{
+  try {
+    const topStocks = await StockModel.find().sort({price:-1}).limit(10);
+    res.status(200).send({"msg":"topStocks are",topStocks})
+  } catch (error) {
+    res.send({"error":error})
+  }
+})
+
+app.get("/about",(req,res)=>{
+    res.send({"msg":"This is the about page"})
+})
+
+
+
+///Server connection
+
+app.listen(process.env.port,async ()=>{
     try {
-      await connection;
-      console.log("Connected to MongoDB");
-      console.log(`Server is running at port ${process.env.PORT || 8080}`);
+         await connection
+         console.log("connected to DB")
+         console.log(`Server is ruuning at port ${process.env.PORT}`);
     } catch (error) {
-      console.log("Error connecting to db", error);
+        console.log(error)
     }
-  });
-  
+    
+})

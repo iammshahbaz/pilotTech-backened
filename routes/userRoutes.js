@@ -1,86 +1,78 @@
-const express = require('express');
-const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
-const User = require('../model/userModel');
-const { protect } = require('../middleware/authMiddleware');
-const router = express.Router();
+const express = require("express")
+const {UserModel} = require("../model/userModel")
+const bcrypt = require("bcrypt")
+const userRouter= express.Router()
+const jwt = require("jsonwebtoken")
+const { auth } = require("../middleware/auth")
+const { access } = require("../middleware/access")
+const { StockModel } = require("../model/stockModel")
 
-// Generate JWT token
-const generateToken = (id, role) => {
-  return jwt.sign({ id, role }, process.env.JWT_SECRET, {
-    expiresIn: '30d',
-  });
-};
+//Adding new user
+
+userRouter.post("/register",async(req,res)=>{
+   const {username,email,password,role}= req.body
+     try {
+         bcrypt.hash(password, 8, async(err, hash) => {
+             if(err){
+                  res.send({"error":err})
+             }
+             else{
+               const user= new UserModel({username,email,password:hash,role})
+               await user.save();
+               res.send({"msg":"New user has been added"})
+             }
+         })
+     } 
+     catch (error) {
+        res.send({"error":error})
+        
+     }
+})
 
 
-// User Registration
-router.post('/register', async (req, res) => {
-  const { email, password } = req.body;
-  try {
-    let user = await User.findOne({ email });
-    if (user) {
-      return res.status(400).json({ message: 'User already exists' });
+//Authenticating the existing user -->  Login
+
+userRouter.post("/login",async(req,res)=>{
+    const {email,password} = req.body
+    try {
+         const user =  await UserModel.findOne({email})
+         if(!user){
+          res.send({"Error":"User Not Found"})
+         }
+         
+         bcrypt.compare(password, user.password, (err, result) => {
+               if(result){
+                 const accessToken = jwt.sign({ userID:user._id,author:user.username }, 'masai')
+                  res.send({"msg":"Login Successful",accessToken})
+               }
+               else{
+                  res.send({"msg":"User Not Found.."})
+                }
+         });       
+     } 
+    catch (error) {
+       res.send({"error":error})
+       
     }
+})
 
-    user = new User({ email, password });
-    await user.save();
+//user can see alll stocks page
+// User can see all stocks page
+// userRouter.get("/allstocks", auth, access("user"), async (req, res) => {
 
-    const token = generateToken(user._id);
-    res.status(201).json({ token });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-// User Login
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+userRouter.get("/allstocks", async (req, res) => {
   try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid credentials' });
-
-    const token = generateToken(user._id);
-    res.json({ token });
+    const stocks = await StockModel.find();
+    res.status(200).send({ "msg": "The available stocks are", stocks });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    console.error("Error fetching stocks:", error);
+    res.status(500).send({ "msg": "Error fetching stocks", error: error.message });
   }
 });
 
-// Admin: Get All Users
-router.get('/', protect, async (req, res) => {
-  try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access forbidden: Admins only' });
-    }
 
-    const users = await User.find();
-    res.json(users);
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
 
-// Admin: Disable User
-router.put('/:id/disable', protect, async (req, res) => {
-  try {
-    if (req.user.role !== 'admin') {
-      return res.status(403).json({ message: 'Access forbidden: Admins only' });
-    }
 
-    const user = await User.findById(req.params.id);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
-    user.role = 'inactive';
-    await user.save();
-    res.json({ message: 'User disabled successfully' });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-module.exports = router;
-
-//router
+module.exports={
+    userRouter
+}
