@@ -82,3 +82,5 @@ router.put('/:id/disable', protect, async (req, res) => {
 });
 
 module.exports = router;
+
+//router
